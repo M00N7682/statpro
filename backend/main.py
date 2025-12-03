@@ -85,7 +85,7 @@ async def upload_file(file: UploadFile = File(...)):
         # NaN 값을 None으로 변환 (JSON 직렬화 호환성)
         df = df.where(pd.notnull(df), None)
         
-        preview = df.head(10).to_dict(orient='records')
+        preview = df.head(30).to_dict(orient='records')
         columns = [{"name": col, "type": str(df[col].dtype)} for col in df.columns]
         
         return {

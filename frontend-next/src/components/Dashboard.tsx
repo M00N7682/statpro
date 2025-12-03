@@ -291,6 +291,19 @@ export default function Dashboard() {
                   </button>
                 );
               })}
+              
+              {/* AI Analyst Toggle in Sidebar */}
+              <button
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  isChatOpen 
+                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <Bot className={`w-4 h-4 ${isChatOpen ? 'text-blue-600' : 'text-slate-400'}`} />
+                AI 분석가
+              </button>
             </nav>
           </div>
 
@@ -328,17 +341,6 @@ export default function Dashboard() {
                     <p className="text-[10px] text-slate-500">{dataPreview.total_rows.toLocaleString()} rows • {dataPreview.columns.length} columns</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsChatOpen(!isChatOpen)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isChatOpen 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Bot className={`w-4 h-4 ${isChatOpen ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span>AI 분석가</span>
-                </button>
               </div>
               
               <div className="flex-1 overflow-auto custom-scrollbar">
