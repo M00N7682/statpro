@@ -272,30 +272,90 @@ async def analyze_chat(request: ChatRequest):
         columns_text = "\n".join(columns_info)
         
         system_prompt = f"""
-You are a data analysis assistant. 
-Here is the schema of the dataset:
+You are a Python Data Analyst. 
+You have access to a pandas DataFrame named `df` containing the full dataset.
+The columns are:
 {columns_text}
 
-User will ask a question about this data.
-If the user asks for a plot/chart, return a JSON with "type": "plot" and a "plot_config" field containing a Plotly JSON object (data and layout).
-If the user asks for a calculation or text answer, return a JSON with "type": "text" and "content" field.
-If the user asks for a table, return "type": "table" and "data" field (list of dicts).
-ALWAYS return valid JSON.
+User Query: {request.query}
+
+Write Python code to analyze `df` and assign the result to a dictionary named `result`.
+The `result` dictionary must have a 'type' key ('text', 'plot', or 'table').
+
+Rules:
+1. If the user asks for a plot or visualization:
+   - Use `plotly.express` or `plotly.graph_objects`.
+   - Create a figure object `fig`.
+   - Assign `result = {{'type': 'plot', 'plot_config': json.loads(fig.to_json())}}`.
+   - You MUST import `json` and `plotly.express` as `px` (or `plotly.graph_objects` as `go`).
+   - Use the FULL `df` data for the plot. Do not use sample data.
+
+2. If the user asks for a text answer (e.g., count, mean, summary):
+   - Calculate the answer using `df`.
+   - Assign `result = {{'type': 'text', 'content': 'Your answer here'}}`.
+   - The content should be a string.
+
+3. If the user asks for a table:
+   - Create a summary dataframe or list of dicts.
+   - Assign `result = {{'type': 'table', 'table': df_summary.to_dict()}}`.
+
+4. Do NOT wrap the code in markdown blocks (like ```python). Just return the raw code.
+5. Ensure the code is valid and executable.
 """
 
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.query}
             ],
-            response_format={ "type": "json_object" }
+            temperature=0
         )
         
-        content = response.choices[0].message.content
-        return json.loads(content)
+        code = response.choices[0].message.content
+        
+        # Clean code (remove markdown if present)
+        if code.startswith("```python"):
+            code = code.replace("```python", "").replace("```", "")
+        elif code.startswith("```"):
+            code = code.replace("```", "")
+            
+        print("Executing code:\n", code)
+        
+        # Execute Code
+        import json
+        import plotly
+        import plotly.express as px
+        
+        local_scope = {
+            "df": df, 
+            "pd": pd, 
+            "np": np, 
+            "json": json, 
+            "plotly": plotly, 
+            "px": px
+        }
+        
+        try:
+            exec(code, {}, local_scope)
+        except Exception as exec_error:
+            return {
+                "type": "text",
+                "content": f"코드 실행 중 오류가 발생했습니다.\n\n오류 메시지: {str(exec_error)}\n\n생성된 코드:\n```python\n{code}\n```"
+            }
+        
+        result = local_scope.get("result")
+        
+        if not result:
+            return {
+                "type": "text", 
+                "content": f"코드는 실행되었으나 'result' 변수가 생성되지 않았습니다.\n\n생성된 코드:\n```python\n{code}\n```"
+            }
+            
+        return result
+
     except Exception as e:
+        print(f"Error: {str(e)}")
         return {
             "type": "text",
-            "content": f"AI 분석 중 오류가 발생했습니다: {str(e)}"
+            "content": f"분석 중 오류가 발생했습니다: {str(e)}"
         }

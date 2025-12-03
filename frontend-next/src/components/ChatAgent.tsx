@@ -9,6 +9,7 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 interface ChatAgentProps {
   filename: string;
+  onAnalysisResult?: (result: { type: 'plot' | 'table', data: any }) => void;
 }
 
 interface Message {
@@ -21,7 +22,7 @@ interface Message {
   timestamp: Date;
 }
 
-export default function ChatAgent({ filename }: ChatAgentProps) {
+export default function ChatAgent({ filename, onAnalysisResult }: ChatAgentProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -91,6 +92,15 @@ export default function ChatAgent({ filename }: ChatAgentProps) {
       };
 
       setMessages(prev => [...prev, botMessage]);
+
+      // 메인 화면에 결과 표시
+      if (onAnalysisResult) {
+        if (data.type === 'plot' && data.plot_config) {
+          onAnalysisResult({ type: 'plot', data: data.plot_config });
+        } else if (data.type === 'table' && data.table) {
+          onAnalysisResult({ type: 'table', data: data.table });
+        }
+      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
@@ -114,7 +124,7 @@ export default function ChatAgent({ filename }: ChatAgentProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
         <div className="flex items-center gap-2">
@@ -172,55 +182,27 @@ export default function ChatAgent({ filename }: ChatAgentProps) {
                 {msg.content}
               </div>
 
-              {/* Plot Rendering */}
+              {/* Plot Rendering - Chat에서는 텍스트 알림만 표시 */}
               {msg.type === 'plot' && msg.plotConfig && (
-                <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm w-full h-[300px]">
-                  <Plot
-                    data={msg.plotConfig.data}
-                    layout={{
-                      ...msg.plotConfig.layout,
-                      autosize: true,
-                      margin: { l: 40, r: 20, t: 30, b: 40 },
-                      font: { size: 10 }
-                    }}
-                    useResizeHandler={true}
-                    style={{ width: '100%', height: '100%' }}
-                    config={{ displayModeBar: false }}
-                  />
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                  <div className="bg-blue-50 p-2 rounded-lg">
+                    <Bot className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">시각화가 생성되었습니다</p>
+                    <p className="text-xs text-slate-500">메인 화면에서 결과를 확인하세요.</p>
+                  </div>
                 </div>
               )}
 
-              {/* Table Rendering */}
+              {/* Table Rendering - Chat에서는 요약만 보여줌 */}
               {msg.type === 'table' && msg.tableData && (
-                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden max-w-full">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-left">
-                            <thead className="bg-slate-50 border-b border-slate-100">
-                                <tr>
-                                    <th className="px-4 py-2 font-medium text-slate-500">Metric</th>
-                                    {Object.keys(msg.tableData).map(col => (
-                                        <th key={col} className="px-4 py-2 font-medium text-slate-900">{col}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'].map(metric => (
-                                    <tr key={metric} className="border-b border-slate-50 last:border-0">
-                                        <td className="px-4 py-2 font-medium text-slate-500 bg-slate-50/50">{metric}</td>
-                                        {Object.keys(msg.tableData).map(col => (
-                                            <td key={`${col}-${metric}`} className="px-4 py-2 text-slate-700 font-mono">
-                                                {msg.tableData[col][metric] !== undefined 
-                                                    ? typeof msg.tableData[col][metric] === 'number' 
-                                                        ? msg.tableData[col][metric].toFixed(2) 
-                                                        : msg.tableData[col][metric]
-                                                    : '-'}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+                    <div className="flex items-center gap-2 text-slate-600 mb-1">
+                        <Bot className="w-4 h-4" />
+                        <span className="text-xs font-bold">통계 표 생성됨</span>
                     </div>
+                    <p className="text-[10px] text-slate-400">메인 화면에서 상세 내용을 확인하세요.</p>
                  </div>
               )}
               

@@ -75,7 +75,11 @@ export default function Dashboard() {
   const [regressionY, setRegressionY] = useState<string>("");
   const [regressionResult, setRegressionResult] = useState<RegressionResult | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'preview' | 'stats' | 'correlation' | 'visualization' | 'regression' | 'chat'>('preview');
+  // AI Analysis State
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<{ type: 'plot' | 'table', data: any } | null>(null);
+
+    const [activeTab, setActiveTab] = useState<'preview' | 'stats' | 'correlation' | 'visualization' | 'regression' | 'ai_result'>('preview');
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     // Mock or fetch analysis types
@@ -84,9 +88,13 @@ export default function Dashboard() {
       { id: "correlation", name: "상관 분석", description: "변수 간의 관계 파악", icon: "ScatterChart" },
       { id: "regression", name: "회귀 분석", description: "인과 관계 예측 모델링", icon: "TrendingUp" },
       { id: "visualization", name: "시각화", description: "다양한 차트로 데이터 표현", icon: "PieChart" },
-      { id: "chat", name: "AI 분석가", description: "대화형 데이터 분석 및 시각화", icon: "Bot" },
     ]);
   }, []);
+
+  const handleAiAnalysisResult = (result: { type: 'plot' | 'table', data: any }) => {
+    setAiAnalysisResult(result);
+    setActiveTab('ai_result');
+  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -236,7 +244,6 @@ export default function Dashboard() {
                 {type.id === 'correlation' && <Network className="w-5 h-5" />}
                 {type.id === 'regression' && <TrendingUp className="w-5 h-5" />}
                 {type.id === 'visualization' && <PieChart className="w-5 h-5" />}
-                {type.id === 'chat' && <Bot className="w-5 h-5" />}
               </div>
               <span className="font-bold text-slate-900 text-sm">{type.name}</span>
             </div>
@@ -267,7 +274,6 @@ export default function Dashboard() {
                 { id: 'correlation', label: '상관 분석', icon: Network },
                 { id: 'regression', label: '회귀 분석', icon: TrendingUp },
                 { id: 'visualization', label: '시각화', icon: PieChart },
-                { id: 'chat', label: 'AI 분석가', icon: Bot },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
@@ -307,35 +313,42 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-8">
-        <header className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">
-            {activeTab === 'preview' && '데이터 미리보기'}
-            {activeTab === 'stats' && '기초 통계 분석'}
-            {activeTab === 'correlation' && '상관 분석'}
-            {activeTab === 'regression' && '회귀 분석'}
-            {activeTab === 'visualization' && '데이터 시각화'}
-          </h2>
-          <p className="text-slate-500 mt-1">
-            {activeTab === 'preview' && '업로드된 데이터의 구조와 내용을 확인합니다.'}
-            {activeTab === 'stats' && '수치형 변수들의 주요 통계 지표를 확인합니다.'}
-            {activeTab === 'correlation' && '변수들 간의 상관관계를 히트맵으로 분석합니다.'}
-            {activeTab === 'regression' && '두 변수 간의 선형 관계를 모델링하고 예측합니다.'}
-            {activeTab === 'visualization' && '다양한 차트를 통해 데이터를 시각적으로 탐색합니다.'}
-          </p>
-        </header>
-
-        <div className="animate-fade-in">
-          {activeTab === 'preview' && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
-              <div className="overflow-auto custom-scrollbar flex-1">
+      <div className="flex-1 flex overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Top: Data Preview (Persistent) */}
+          {dataPreview && (
+            <div className="h-72 bg-white border-b border-slate-200 flex-shrink-0 flex flex-col">
+              <div className="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 p-1.5 rounded-md">
+                    <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 text-sm">{dataPreview.filename}</h3>
+                    <p className="text-[10px] text-slate-500">{dataPreview.total_rows.toLocaleString()} rows • {dataPreview.columns.length} columns</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsChatOpen(!isChatOpen)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isChatOpen 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Bot className={`w-4 h-4 ${isChatOpen ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span>AI 분석가</span>
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-auto custom-scrollbar">
                 <table className="w-full text-sm text-left text-slate-600 relative border-collapse">
                   <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                     <tr>
                       {dataPreview.columns.map((col) => (
-                        <th key={col.name} className="px-6 py-4 font-bold whitespace-nowrap bg-slate-50">
+                        <th key={col.name} className="px-6 py-3 font-bold whitespace-nowrap bg-slate-50">
                           {col.name}
-                          <span className="block text-[10px] text-slate-400 font-normal mt-1">{col.type}</span>
+                          <span className="block text-[10px] text-slate-400 font-normal mt-0.5">{col.type}</span>
                         </th>
                       ))}
                     </tr>
@@ -344,7 +357,7 @@ export default function Dashboard() {
                     {dataPreview.preview.map((row, idx) => (
                       <tr key={idx} className="bg-white hover:bg-blue-50/30 transition-colors">
                         {dataPreview.columns.map((col) => (
-                          <td key={`${idx}-${col.name}`} className="px-6 py-3 whitespace-nowrap font-mono text-xs">
+                          <td key={`${idx}-${col.name}`} className="px-6 py-2 whitespace-nowrap font-mono text-xs">
                             {row[col.name] !== null ? String(row[col.name]) : <span className="text-slate-300 italic">null</span>}
                           </td>
                         ))}
@@ -353,13 +366,41 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
-              <div className="bg-slate-50 border-t border-slate-200 p-3 text-xs text-slate-500 text-center">
-                Showing first {dataPreview.preview.length} rows of {dataPreview.total_rows}
-              </div>
             </div>
           )}
 
-          {activeTab === 'stats' && basicStats && (
+          <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+            <header className="mb-6">
+              <h2 className="text-xl font-bold text-slate-900">
+                {activeTab === 'preview' && '데이터 전체보기'}
+                {activeTab === 'stats' && '기초 통계 분석'}
+                {activeTab === 'correlation' && '상관 분석'}
+                {activeTab === 'regression' && '회귀 분석'}
+                {activeTab === 'visualization' && '데이터 시각화'}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                {activeTab === 'preview' && '데이터의 전체 구조를 확인합니다.'}
+                {activeTab === 'stats' && '수치형 변수들의 주요 통계 지표를 확인합니다.'}
+                {activeTab === 'correlation' && '변수들 간의 상관관계를 히트맵으로 분석합니다.'}
+                {activeTab === 'regression' && '두 변수 간의 선형 관계를 모델링하고 예측합니다.'}
+                {activeTab === 'visualization' && '다양한 차트를 통해 데이터를 시각적으로 탐색합니다.'}
+                {activeTab === 'ai_result' && 'AI가 생성한 분석 결과를 확인합니다.'}
+              </p>
+            </header>
+
+            <div className="animate-fade-in pb-10">
+              {activeTab === 'preview' && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
+                    <LayoutDashboard className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">데이터 분석을 시작하세요</h3>
+                  <p className="text-slate-500 max-w-md mx-auto mb-6">
+                    상단에서 데이터 미리보기를 확인할 수 있습니다.<br/>
+                    좌측 메뉴에서 원하는 분석 도구를 선택하거나, 우측 상단의 <strong>AI 분석가</strong>와 대화해보세요.
+                  </p>
+                </div>
+              )}          {activeTab === 'stats' && basicStats && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Object.entries(basicStats.stats).map(([colName, stats]) => (
                 <div key={colName} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all duration-300 group">
@@ -574,11 +615,74 @@ export default function Dashboard() {
             />
           )}
 
-          {activeTab === 'chat' && (
-            <ChatAgent filename={dataPreview.filename} />
+          {activeTab === 'ai_result' && aiAnalysisResult && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[600px] flex flex-col">
+              <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+                <Bot className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900">AI 분석 결과</h3>
+              </div>
+              
+              <div className="flex-1 overflow-auto">
+                {aiAnalysisResult.type === 'plot' && (
+                  <Plot
+                    data={aiAnalysisResult.data.data}
+                    layout={{
+                      ...aiAnalysisResult.data.layout,
+                      autosize: true,
+                      margin: { l: 50, r: 50, t: 50, b: 50 },
+                    }}
+                    useResizeHandler={true}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                )}
+
+                {aiAnalysisResult.type === 'table' && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-3 font-medium text-slate-500">Metric</th>
+                          {Object.keys(aiAnalysisResult.data).map(col => (
+                            <th key={col} className="px-6 py-3 font-medium text-slate-900">{col}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'].map(metric => (
+                          <tr key={metric} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
+                            <td className="px-6 py-3 font-medium text-slate-500 bg-slate-50/30">{metric}</td>
+                            {Object.keys(aiAnalysisResult.data).map(col => (
+                              <td key={`${col}-${metric}`} className="px-6 py-3 text-slate-700 font-mono">
+                                {aiAnalysisResult.data[col][metric] !== undefined 
+                                  ? typeof aiAnalysisResult.data[col][metric] === 'number' 
+                                    ? aiAnalysisResult.data[col][metric].toFixed(4) 
+                                    : aiAnalysisResult.data[col][metric]
+                                  : '-'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
+          </div>
+        </main>
         </div>
-      </main>
+
+        {/* Chat Sidebar */}
+        {isChatOpen && (
+          <aside className="w-[400px] border-l border-slate-200 bg-white h-full shadow-xl z-20 transition-all flex flex-col">
+            <ChatAgent 
+              filename={dataPreview.filename} 
+              onAnalysisResult={handleAiAnalysisResult}
+            />
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
