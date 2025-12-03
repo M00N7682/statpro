@@ -322,24 +322,24 @@ export default function Dashboard() {
 
         <div className="animate-fade-in">
           {activeTab === 'preview' && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-600">
-                  <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
+              <div className="overflow-auto custom-scrollbar flex-1">
+                <table className="w-full text-sm text-left text-slate-600 relative border-collapse">
+                  <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                     <tr>
                       {dataPreview.columns.map((col) => (
-                        <th key={col.name} className="px-6 py-4 font-bold whitespace-nowrap">
+                        <th key={col.name} className="px-6 py-4 font-bold whitespace-nowrap bg-slate-50">
                           {col.name}
                           <span className="block text-[10px] text-slate-400 font-normal mt-1">{col.type}</span>
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {dataPreview.preview.map((row, idx) => (
-                      <tr key={idx} className="bg-white border-b border-slate-100 hover:bg-slate-50">
+                      <tr key={idx} className="bg-white hover:bg-blue-50/30 transition-colors">
                         {dataPreview.columns.map((col) => (
-                          <td key={`${idx}-${col.name}`} className="px-6 py-4 whitespace-nowrap">
+                          <td key={`${idx}-${col.name}`} className="px-6 py-3 whitespace-nowrap font-mono text-xs">
                             {row[col.name] !== null ? String(row[col.name]) : <span className="text-slate-300 italic">null</span>}
                           </td>
                         ))}
@@ -348,37 +348,44 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
+              <div className="bg-slate-50 border-t border-slate-200 p-3 text-xs text-slate-500 text-center">
+                Showing first {dataPreview.preview.length} rows of {dataPreview.total_rows}
+              </div>
             </div>
           )}
 
           {activeTab === 'stats' && basicStats && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Object.entries(basicStats.stats).map(([colName, stats]) => (
-                <div key={colName} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                  <h4 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
-                    {colName}
-                    <span className="text-xs font-normal text-slate-400 bg-slate-50 px-2 py-1 rounded">Numeric</span>
-                  </h4>
-                  <div className="space-y-3">
+                <div key={colName} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all duration-300 group">
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                    <h4 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {colName}
+                    </h4>
+                    <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full uppercase tracking-wide">Numeric</span>
+                  </div>
+                  <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500 text-sm">평균 (Mean)</span>
-                      <span className="font-mono font-medium text-slate-900">{stats['mean'].toFixed(2)}</span>
+                      <span className="text-slate-500 text-sm font-medium">평균 (Mean)</span>
+                      <span className="font-mono font-bold text-slate-900 bg-slate-50 px-2 py-0.5 rounded">{stats['mean'].toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-3 rounded-lg">
+                            <span className="block text-xs text-slate-400 mb-1">최소 (Min)</span>
+                            <span className="font-mono font-semibold text-slate-700">{stats['min']}</span>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg">
+                            <span className="block text-xs text-slate-400 mb-1">최대 (Max)</span>
+                            <span className="font-mono font-semibold text-slate-700">{stats['max']}</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-50">
                       <span className="text-slate-500 text-sm">표준편차 (Std)</span>
-                      <span className="font-mono font-medium text-slate-900">{stats['std'].toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500 text-sm">최소값 (Min)</span>
-                      <span className="font-mono font-medium text-slate-900">{stats['min']}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500 text-sm">최대값 (Max)</span>
-                      <span className="font-mono font-medium text-slate-900">{stats['max']}</span>
+                      <span className="font-mono text-slate-600">{stats['std'].toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500 text-sm">중앙값 (Median)</span>
-                      <span className="font-mono font-medium text-slate-900">{stats['50%']}</span>
+                      <span className="font-mono text-slate-600">{stats['50%']}</span>
                     </div>
                   </div>
                 </div>
