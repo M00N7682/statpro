@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import numpy as np
@@ -6,7 +6,10 @@ from scipy import stats
 import io
 import os
 import shutil
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict, Any
+from openai import OpenAI
+from pydantic import BaseModel
 
 app = FastAPI(title="EasyDataViz API")
 
@@ -213,3 +216,86 @@ def get_column_data(filename: str, column: str):
         return {"column": column, "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ChatRequest(BaseModel):
+    filename: str
+    query: str
+    api_key: Optional[str] = None
+
+@app.post("/analyze/chat")
+async def analyze_chat(request: ChatRequest):
+    file_path = os.path.join(UPLOAD_DIR, request.filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        df = pd.read_csv(file_path) if request.filename.endswith('.csv') else pd.read_excel(file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+
+    # Basic Heuristic Response (Fallback)
+    if not request.api_key:
+        query_lower = request.query.lower()
+        if "column" in query_lower or "컬럼" in query_lower:
+            return {
+                "type": "text",
+                "content": f"이 파일의 컬럼은 다음과 같습니다: {', '.join(df.columns)}"
+            }
+        elif "row" in query_lower or "행" in query_lower or "count" in query_lower:
+            return {
+                "type": "text",
+                "content": f"총 {len(df)}개의 행이 있습니다."
+            }
+        elif "summary" in query_lower or "요약" in query_lower:
+            return {
+                "type": "text",
+                "content": "데이터 요약 정보입니다.",
+                "table": df.describe().to_dict()
+            }
+        else:
+            return {
+                "type": "text",
+                "content": "API Key가 없어서 간단한 답변만 가능합니다. OpenAI API Key를 입력하면 더 똑똑한 분석이 가능합니다."
+            }
+
+    # OpenAI Integration
+    try:
+        client = OpenAI(api_key=request.api_key)
+        
+        # Construct Prompt
+        columns_info = []
+        for col in df.columns:
+            dtype = str(df[col].dtype)
+            sample = str(df[col].head(3).tolist())
+            columns_info.append(f"- {col} ({dtype}): {sample}")
+        
+        columns_text = "\n".join(columns_info)
+        
+        system_prompt = f"""
+You are a data analysis assistant. 
+Here is the schema of the dataset:
+{columns_text}
+
+User will ask a question about this data.
+If the user asks for a plot/chart, return a JSON with "type": "plot" and a "plot_config" field containing a Plotly JSON object (data and layout).
+If the user asks for a calculation or text answer, return a JSON with "type": "text" and "content" field.
+If the user asks for a table, return "type": "table" and "data" field (list of dicts).
+ALWAYS return valid JSON.
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request.query}
+            ],
+            response_format={ "type": "json_object" }
+        )
+        
+        content = response.choices[0].message.content
+        return json.loads(content)
+    except Exception as e:
+        return {
+            "type": "text",
+            "content": f"AI 분석 중 오류가 발생했습니다: {str(e)}"
+        }

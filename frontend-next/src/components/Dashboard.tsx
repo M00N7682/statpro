@@ -17,9 +17,11 @@ import {
   LayoutDashboard,
   Table as TableIcon,
   Sigma,
-  Network
+  Network,
+  Bot
 } from 'lucide-react';
 import VisualizationBuilder from './VisualizationBuilder';
+import ChatAgent from './ChatAgent';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -73,7 +75,7 @@ export default function Dashboard() {
   const [regressionY, setRegressionY] = useState<string>("");
   const [regressionResult, setRegressionResult] = useState<RegressionResult | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'preview' | 'stats' | 'correlation' | 'visualization' | 'regression'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'stats' | 'correlation' | 'visualization' | 'regression' | 'chat'>('preview');
 
   useEffect(() => {
     // Mock or fetch analysis types
@@ -82,6 +84,7 @@ export default function Dashboard() {
       { id: "correlation", name: "상관 분석", description: "변수 간의 관계 파악", icon: "ScatterChart" },
       { id: "regression", name: "회귀 분석", description: "인과 관계 예측 모델링", icon: "TrendingUp" },
       { id: "visualization", name: "시각화", description: "다양한 차트로 데이터 표현", icon: "PieChart" },
+      { id: "chat", name: "AI 분석가", description: "대화형 데이터 분석 및 시각화", icon: "Bot" },
     ]);
   }, []);
 
@@ -233,6 +236,7 @@ export default function Dashboard() {
                 {type.id === 'correlation' && <Network className="w-5 h-5" />}
                 {type.id === 'regression' && <TrendingUp className="w-5 h-5" />}
                 {type.id === 'visualization' && <PieChart className="w-5 h-5" />}
+                {type.id === 'chat' && <Bot className="w-5 h-5" />}
               </div>
               <span className="font-bold text-slate-900 text-sm">{type.name}</span>
             </div>
@@ -263,6 +267,7 @@ export default function Dashboard() {
                 { id: 'correlation', label: '상관 분석', icon: Network },
                 { id: 'regression', label: '회귀 분석', icon: TrendingUp },
                 { id: 'visualization', label: '시각화', icon: PieChart },
+                { id: 'chat', label: 'AI 분석가', icon: Bot },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
@@ -567,6 +572,10 @@ export default function Dashboard() {
               filename={dataPreview.filename} 
               columns={dataPreview.columns} 
             />
+          )}
+
+          {activeTab === 'chat' && (
+            <ChatAgent filename={dataPreview.filename} />
           )}
         </div>
       </main>
