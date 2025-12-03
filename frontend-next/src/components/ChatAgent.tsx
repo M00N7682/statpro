@@ -27,7 +27,7 @@ export default function ChatAgent({ filename, onAnalysisResult }: ChatAgentProps
     {
       id: 'welcome',
       role: 'assistant',
-      content: `안녕하세요! ${filename} 데이터에 대해 무엇이든 물어보세요. (예: "데이터 요약해줘", "가격 컬럼의 평균은?", "판매량 분포 그려줘")`,
+      content: `안녕하세요! ${filename} 데이터에 대해 무엇이든 물어보세요. (ex. "데이터 요약해줘", "가격 컬럼의 평균은?", "판매량 분포 그려줘")`,
       type: 'text',
       timestamp: new Date()
     }

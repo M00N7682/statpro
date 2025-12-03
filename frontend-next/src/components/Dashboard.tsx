@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 import { 
   BarChart3, 
   ScatterChart, 
@@ -18,7 +20,9 @@ import {
   Table as TableIcon,
   Sigma,
   Network,
-  Bot
+  Bot,
+  LogOut,
+  User
 } from 'lucide-react';
 import VisualizationBuilder from './VisualizationBuilder';
 import ChatAgent from './ChatAgent';
@@ -61,6 +65,8 @@ interface RegressionResult {
 }
 
 export default function Dashboard() {
+  const { user, loading, logout } = useAuth();
+  const router = useRouter();
   const [analysisTypes, setAnalysisTypes] = useState<AnalysisType[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [dataPreview, setDataPreview] = useState<DataPreview | null>(null);
@@ -77,9 +83,27 @@ export default function Dashboard() {
 
   // AI Analysis State
   const [aiAnalysisResult, setAiAnalysisResult] = useState<{ type: 'plot' | 'table', data: any } | null>(null);
+  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
 
-    const [activeTab, setActiveTab] = useState<'preview' | 'stats' | 'correlation' | 'visualization' | 'regression' | 'ai_result'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'stats' | 'correlation' | 'visualization' | 'regression' | 'ai_result' | 'saved'>('preview');
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'saved' && user) {
+      const fetchSavedAnalyses = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get('http://localhost:8000/analyses', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setSavedAnalyses(response.data);
+        } catch (error) {
+          console.error('Failed to fetch saved analyses:', error);
+        }
+      };
+      fetchSavedAnalyses();
+    }
+  }, [activeTab, user]);
 
   useEffect(() => {
     // Mock or fetch analysis types
@@ -90,6 +114,25 @@ export default function Dashboard() {
       { id: "visualization", name: "시각화", description: "다양한 차트로 데이터 표현", icon: "PieChart" },
     ]);
   }, []);
+
+  const saveAnalysis = async () => {
+    if (!user || !aiAnalysisResult) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:8000/analyses', {
+        title: `Analysis ${new Date().toLocaleString()}`,
+        result_type: aiAnalysisResult.type,
+        content: aiAnalysisResult.data
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('분석 결과가 저장되었습니다.');
+    } catch (error) {
+      console.error('Failed to save analysis:', error);
+      alert('저장에 실패했습니다.');
+    }
+  };
 
   const handleAiAnalysisResult = (result: { type: 'plot' | 'table', data: any }) => {
     setAiAnalysisResult(result);
@@ -188,7 +231,26 @@ export default function Dashboard() {
 
   if (!dataPreview) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 relative">
+        <div className="absolute top-0 right-0 p-6 flex items-center gap-4">
+            {user ? (
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-slate-600 font-medium bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                        <User className="w-4 h-4" />
+                        {user.email}
+                    </div>
+                    <button onClick={logout} className="flex items-center gap-2 text-slate-500 hover:text-red-600 transition-colors font-medium">
+                        <LogOut className="w-4 h-4" />
+                        로그아웃
+                    </button>
+                </div>
+            ) : (
+                <button onClick={() => router.push('/login')} className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
+                    로그인
+                </button>
+            )}
+        </div>
+
         <div className="text-center mb-12 animate-fade-in-up">
           <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-2xl mb-6">
             <BarChart3 className="w-10 h-10 text-blue-600" />
@@ -292,9 +354,35 @@ export default function Dashboard() {
                 );
               })}
               
+              {user && (
+                <button
+                  onClick={() => setActiveTab('saved')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === 'saved' 
+                      ? 'bg-blue-50 text-blue-700 shadow-sm' 
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <CheckSquare className={`w-4 h-4 ${activeTab === 'saved' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  저장된 분석
+                </button>
+              )}
+
               {/* AI Analyst Toggle in Sidebar */}
               <button
-                onClick={() => setIsChatOpen(!isChatOpen)}
+                onClick={() => {
+                  if (!user) {
+                    if (confirm("로그인이 필요한 기능입니다. 로그인 페이지로 이동하시겠습니까?")) {
+                      router.push('/login');
+                    }
+                    return;
+                  }
+                  if (!user.is_paid) {
+                    alert("유료 회원 전용 기능입니다. (AI Analyst)");
+                    return;
+                  }
+                  setIsChatOpen(!isChatOpen);
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isChatOpen 
                     ? 'bg-blue-50 text-blue-700 shadow-sm' 
@@ -303,6 +391,7 @@ export default function Dashboard() {
               >
                 <Bot className={`w-4 h-4 ${isChatOpen ? 'text-blue-600' : 'text-slate-400'}`} />
                 AI 분석가
+                {!user?.is_paid && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-auto">PRO</span>}
               </button>
             </nav>
           </div>
@@ -322,6 +411,31 @@ export default function Dashboard() {
               다른 파일 열기
             </button>
           </div>
+        </div>
+
+        {/* User Profile Footer */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            {user ? (
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                            {user.email[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-900 truncate">{user.email}</p>
+                            <p className="text-xs text-slate-500">{user.is_paid ? 'Pro Plan' : 'Free Plan'}</p>
+                        </div>
+                    </div>
+                    <button onClick={logout} className="w-full flex items-center justify-center gap-2 text-xs text-slate-600 hover:text-red-600 py-2 bg-white border border-slate-200 rounded-lg hover:bg-red-50 transition-colors">
+                        <LogOut className="w-3 h-3" />
+                        로그아웃
+                    </button>
+                </div>
+            ) : (
+                <button onClick={() => router.push('/login')} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">
+                    로그인
+                </button>
+            )}
         </div>
       </aside>
 
@@ -619,9 +733,19 @@ export default function Dashboard() {
 
           {activeTab === 'ai_result' && aiAnalysisResult && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[600px] flex flex-col">
-              <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
-                <Bot className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900">AI 분석 결과</h3>
+              <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100 justify-between">
+                <div className="flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-bold text-slate-900">AI 분석 결과</h3>
+                </div>
+                {user && (
+                  <button 
+                    onClick={saveAnalysis}
+                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    결과 저장
+                  </button>
+                )}
               </div>
               
               <div className="flex-1 overflow-auto">
@@ -667,6 +791,28 @@ export default function Dashboard() {
                       </tbody>
                     </table>
                   </div>
+                )}
+              </div>
+            </div>
+          )}
+          {activeTab === 'saved' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <h3 className="font-bold text-slate-900 mb-4">저장된 분석 결과</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {savedAnalyses.map((analysis) => (
+                  <div key={analysis.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <h4 className="font-bold text-slate-800 mb-2">{analysis.title}</h4>
+                    <p className="text-sm text-slate-500 mb-4">{new Date(analysis.created_at).toLocaleString()}</p>
+                    <button 
+                      onClick={() => handleAiAnalysisResult({ type: analysis.result_type, data: analysis.content })}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      결과 보기
+                    </button>
+                  </div>
+                ))}
+                {savedAnalyses.length === 0 && (
+                  <p className="text-slate-500 col-span-full text-center py-10">저장된 분석 결과가 없습니다.</p>
                 )}
               </div>
             </div>

@@ -1,5 +1,7 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Body
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Body, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -10,6 +12,11 @@ import json
 from typing import List, Optional, Dict, Any
 from openai import OpenAI
 from pydantic import BaseModel
+from datetime import timedelta
+
+import models, schemas, auth, database
+
+models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="EasyDataViz API")
 
@@ -34,6 +41,60 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to EasyDataViz API"}
+
+# Auth Endpoints
+@app.post("/register", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(auth.get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed_password = auth.get_password_hash(user.password)
+    db_user = models.User(email=user.email, hashed_password=hashed_password)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/token", response_model=schemas.Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(auth.get_db)):
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/me", response_model=schemas.User)
+async def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
+    return current_user
+
+@app.post("/analyses", response_model=schemas.Analysis)
+def create_analysis(
+    analysis: schemas.AnalysisCreate, 
+    db: Session = Depends(auth.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    db_analysis = models.Analysis(**analysis.dict(), owner_id=current_user.id)
+    db.add(db_analysis)
+    db.commit()
+    db.refresh(db_analysis)
+    return db_analysis
+
+@app.get("/analyses", response_model=List[schemas.Analysis])
+def read_analyses(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(auth.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    analyses = db.query(models.Analysis).filter(models.Analysis.owner_id == current_user.id).offset(skip).limit(limit).all()
+    return analyses
 
 @app.get("/analysis-types")
 def get_analysis_types():

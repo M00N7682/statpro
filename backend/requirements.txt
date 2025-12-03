@@ -7,3 +7,7 @@ openpyxl
 scipy
 
 openai
+plotly
+sqlalchemy
+passlib[bcrypt]
+python-jose[cryptography]
