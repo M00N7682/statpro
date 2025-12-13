@@ -256,7 +256,7 @@ export default function Dashboard() {
             <BarChart3 className="w-10 h-10 text-blue-600" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
-            EasyDataViz
+            Stat Pilot
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             데이터 분석이 어려우신가요? <br className="hidden md:block" />
@@ -323,7 +323,7 @@ export default function Dashboard() {
           <div className="bg-blue-600 p-2 rounded-lg">
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-slate-900">EasyDataViz</span>
+          <span className="font-bold text-lg text-slate-900">Stat Pilot</span>
         </div>
         
         <div className="p-4 flex-1 overflow-y-auto">
@@ -371,16 +371,6 @@ export default function Dashboard() {
               {/* AI Analyst Toggle in Sidebar */}
               <button
                 onClick={() => {
-                  if (!user) {
-                    if (confirm("로그인이 필요한 기능입니다. 로그인 페이지로 이동하시겠습니까?")) {
-                      router.push('/login');
-                    }
-                    return;
-                  }
-                  if (!user.is_paid) {
-                    alert("유료 회원 전용 기능입니다. (AI Analyst)");
-                    return;
-                  }
                   setIsChatOpen(!isChatOpen);
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -391,7 +381,6 @@ export default function Dashboard() {
               >
                 <Bot className={`w-4 h-4 ${isChatOpen ? 'text-blue-600' : 'text-slate-400'}`} />
                 AI 분석가
-                {!user?.is_paid && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-auto">PRO</span>}
               </button>
             </nav>
           </div>
@@ -423,7 +412,6 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-slate-900 truncate">{user.email}</p>
-                            <p className="text-xs text-slate-500">{user.is_paid ? 'Pro Plan' : 'Free Plan'}</p>
                         </div>
                     </div>
                     <button onClick={logout} className="w-full flex items-center justify-center gap-2 text-xs text-slate-600 hover:text-red-600 py-2 bg-white border border-slate-200 rounded-lg hover:bg-red-50 transition-colors">

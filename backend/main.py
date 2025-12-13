@@ -18,7 +18,7 @@ import models, schemas, auth, database
 
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="EasyDataViz API")
+app = FastAPI(title="Stat Pilot API")
 
 # CORS 설정
 origins = [
@@ -40,7 +40,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to EasyDataViz API"}
+    return {"message": "Welcome to Stat Pilot API"}
 
 # Auth Endpoints
 @app.post("/register", response_model=schemas.User)

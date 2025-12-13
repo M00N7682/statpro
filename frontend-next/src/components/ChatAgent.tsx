@@ -223,7 +223,7 @@ export default function ChatAgent({ filename, onAnalysisResult }: ChatAgentProps
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={apiKey ? "데이터에 대해 궁금한 점을 물어보세요..." : "API Key가 없으면 간단한 질문만 가능합니다 (예: 컬럼 보여줘)"}
+            placeholder={apiKey ? "데이터에 대해 궁금한 점을 물어보세요..." : "OpenAI API Key를 입력하면 AI 분석을 사용할 수 있습니다."}
             className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             disabled={isLoading}
           />

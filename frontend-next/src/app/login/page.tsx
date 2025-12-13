@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center p-3 bg-blue-600 rounded-xl mb-4 shadow-lg shadow-blue-200">
             <BarChart3 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">EasyDataViz 로그인</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Stat Pilot 로그인</h1>
           <p className="text-slate-500 mt-2">데이터 분석의 새로운 시작</p>
         </div>
 

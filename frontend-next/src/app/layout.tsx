@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EasyDataViz",
+  title: "Stat Pilot",
   description: "AI-powered Data Visualization Platform",
 };
 
